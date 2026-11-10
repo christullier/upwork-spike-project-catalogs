@@ -1,0 +1,44 @@
+{
+  "note": "Sample AI output. In production a model call replaces this file.",
+  "model": "listing-vision-check-v2 (sample)",
+  "reviewed_at": "2026-11-09",
+  "batch": "FB-1021..FB-1039",
+  "verdicts": {
+    "FB-1021": {
+      "verdict": "flag",
+      "reasons": ["Title does not contain the brand word Basil"]
+    },
+    "FB-1022": {
+      "verdict": "flag",
+      "reasons": ["Price 189.00 is far from the Jewelry median of 68.00"]
+    },
+    "FB-1023": {
+      "verdict": "clear",
+      "reasons": ["Title contains the brand word and the price fits the Tops range"]
+    },
+    "FB-1025": {
+      "verdict": "clear",
+      "reasons": ["Title and image set match the Bags standard"]
+    },
+    "FB-1027": {
+      "verdict": "clear",
+      "reasons": ["Price fits the Shoes range and the title is clear"]
+    },
+    "FB-1029": {
+      "verdict": "clear",
+      "reasons": ["Title contains the brand word and the image count is above the minimum"]
+    },
+    "FB-1032": {
+      "verdict": "clear",
+      "reasons": ["Price fits the Bags range and the bullets are complete"]
+    },
+    "FB-1035": {
+      "verdict": "clear",
+      "reasons": ["Title and price match the Beauty standard"]
+    },
+    "FB-1039": {
+      "verdict": "clear",
+      "reasons": ["Price 34.00 is near the Beauty median"]
+    }
+  }
+}

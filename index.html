@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalog Cleaner — Amazon catalog audit</title>
+<meta name="description" content="Rule based Amazon catalog cleaner. Removes and flags items, shows a reason for each decision, and runs 250,000 rows in the browser.">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f172a'/%3E%3Cpath d='M9 16.5l4.2 4.2L23 11' stroke='%234ade80' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M5 12.5l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <div>
+        <h1>Catalog Cleaner</h1>
+        <p><span id="header-rows">Sample catalog</span> · Amazon flat file audit</p>
+      </div>
+    </div>
+
+    <div class="counters" aria-live="polite">
+      <div class="counter counter-remove">
+        <span class="counter-label">Removed</span>
+        <strong id="count-removed">0</strong>
+      </div>
+      <div class="counter counter-flag">
+        <span class="counter-label">Flagged</span>
+        <strong id="count-flagged">0</strong>
+      </div>
+      <div class="counter counter-clean">
+        <span class="counter-label">Clean</span>
+        <strong id="count-clean">0</strong>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="layout">
+
+  <div class="col-left">
+
+    <!-- Part A: rules -->
+    <section class="card rules-card" aria-labelledby="rules-title">
+      <div class="card-head">
+        <div>
+          <h2 id="rules-title">Rules</h2>
+          <p class="sub" id="rules-sub">0 rows read</p>
+        </div>
+        <button class="btn btn-quiet" id="reset-rules" type="button">Reset</button>
+      </div>
+
+      <p class="hint">Removal rules run first. The first rule that matches sets the decision.</p>
+
+      <h3 class="group-title">Remove</h3>
+      <ul class="rules" id="rules-remove">
+        <li class="rule">
+          <label class="switch">
+            <input type="checkbox" id="toggle-r2" checked>
+            <span class="track" aria-hidden="true"></span>
+            <span class="sr-only">Enable rule R2</span>
+          </label>
+          <div class="rule-body">
+            <div class="rule-top"><span class="rid rid-remove">R2</span><span class="raction">Remove</span><span class="rcount" id="count-r2">0</span></div>
+            <p>Image count below <input class="num" id="minImages" type="number" value="3" min="0" max="20" step="1" inputmode="numeric" aria-label="Minimum image count"> images</p>
+          </div>
+        </li>
+        <li class="rule">
+          <label class="switch">
+            <input type="checkbox" id="toggle-r4" checked>
+            <span class="track" aria-hidden="true"></span>
+            <span class="sr-only">Enable rule R4</span>
+          </label>
+          <div class="rule-body">
+            <div class="rule-top"><span class="rid rid-remove">R4</span><span class="raction">Remove</span><span class="rcount" id="count-r4">0</span></div>
+            <p>Price is 0, or above <input class="num" id="maxPrice" type="number" value="300" min="1" max="100000" step="1" inputmode="numeric" aria-label="Maximum price in USD"> USD</p>
+          </div>
+        </li>
+        <li class="rule">
+          <label class="switch">
+            <input type="checkbox" id="toggle-r6" checked>
+            <span class="track" aria-hidden="true"></span>
+            <span class="sr-only">Enable rule R6</span>
+          </label>
+          <div class="rule-body">
+            <div class="rule-top"><span class="rid rid-remove">R6</span><span class="raction">Remove</span><span class="rcount" id="count-r6">0</span></div>
+            <p>The same GTIN occurs again: remove the later row</p>
+          </div>
+        </li>
+        <li class="rule">
+          <label class="switch">
+            <input type="checkbox" id="toggle-r7" checked>
+            <span class="track" aria-hidden="true"></span>
+            <span class="sr-only">Enable rule R7</span>
+          </label>
+          <div class="rule-body">
+            <div class="rule-top"><span class="rid rid-remove">R7</span><span class="raction">Remove</span><span class="rcount" id="count-r7">0</span></div>
+            <p>Category is not in the allowed list</p>
+          </div>
+        </li>
+      </ul>
+
+      <h3 class="group-title">Flag for review</h3>
+      <ul class="rules" id="rules-flag">
+        <li class="rule">
+          <label class="switch">
+            <input type="checkbox" id="toggle-r1" checked>
+            <span class="track" aria-hidden="true"></span>
+            <span class="sr-only">Enable rule R1</span>
+          </label>
+          <div class="rule-body">
+            <div class="rule-top"><span class="rid rid-flag">R1</span><span class="raction">Flag</span><span class="rcount" id="count-r1">0</span></div>
+            <p>Brand is missing</p>
+          </div>
+        </li>
+        <li class="rule">
+          <label class="switch">
+            <input type="checkbox" id="toggle-r3" checked>
+            <span class="track" aria-hidden="true"></span>
+            <span class="sr-only">Enable rule R3</span>
+          </label>
+          <div class="rule-body">
+            <div class="rule-top"><span class="rid rid-flag">R3</span><span class="raction">Flag</span><span class="rcount" id="count-r3">0</span></div>
+            <p>Title longer than <input class="num" id="maxTitle" type="number" value="200" min="20" max="2000" step="1" inputmode="numeric" aria-label="Maximum title length"> characters, or more than <input class="num" id="capsPct" type="number" value="60" min="10" max="100" step="1" inputmode="numeric" aria-label="Maximum share of capital letters in percent">% capitals</p>
+          </div>
+        </li>
+        <li class="rule">
+          <label class="switch">
+            <input type="checkbox" id="toggle-r5" checked>
+            <span class="track" aria-hidden="true"></span>
+            <span class="sr-only">Enable rule R5</span>
+          </label>
+          <div class="rule-body">
+            <div class="rule-top"><span class="rid rid-flag">R5</span><span class="raction">Flag</span><span class="rcount" id="count-r5">0</span></div>
+            <p>Title has a banned word: best, free shipping, #1, hot sale</p>
+          </div>
+        </li>
+        <li class="rule">
+          <label class="switch">
+            <input type="checkbox" id="toggle-r8" checked>
+            <span class="track" aria-hidden="true"></span>
+            <span class="sr-only">Enable rule R8</span>
+          </label>
+          <div class="rule-body">
+            <div class="rule-top"><span class="rid rid-flag">R8</span><span class="raction">Flag</span><span class="rcount" id="count-r8">0</span></div>
+            <p>AI check: title has no brand word, or the price is far from the category median <span class="pill pill-sample">sample</span></p>
+          </div>
+        </li>
+      </ul>
+
+      <div class="allowed">
+        <span class="allowed-label">Allowed categories</span>
+        <div class="chips-static">
+          <span>Dresses</span><span>Tops</span><span>Bottoms</span><span>Outerwear</span><span>Bags</span><span>Beauty</span><span>Shoes</span><span>Jewelry</span><span>Watches</span>
+        </div>
+      </div>
+
+      <p class="note">Sample AI output. In production a model call replaces this file.</p>
+    </section>
+
+    <!-- Part C: scale test -->
+    <section class="card scale-card" aria-labelledby="scale-title">
+      <div class="card-head">
+        <div>
+          <h2 id="scale-title">Scale test</h2>
+          <p class="sub">250,000 rows, made and checked in the browser</p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-wide" id="scale-run" type="button">Run 250,000 rows</button>
+
+      <div class="progress" role="progressbar" aria-labelledby="scale-status" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="scale-progress">
+        <span class="progress-bar" id="scale-bar"></span>
+      </div>
+      <p class="scale-status" id="scale-status">Idle</p>
+
+      <dl class="stats">
+        <div><dt>Rows</dt><dd id="scale-rows">—</dd></div>
+        <div><dt>Removed</dt><dd id="scale-removed">—</dd></div>
+        <div><dt>Flagged</dt><dd id="scale-flagged">—</dd></div>
+        <div><dt>Clean</dt><dd id="scale-clean">—</dd></div>
+        <div><dt>Run time</dt><dd id="scale-ms">—</dd></div>
+        <div><dt>Rows per second</dt><dd id="scale-rps">—</dd></div>
+      </dl>
+
+      <p class="note">The scale test runs the seven deterministic rules (R1 to R7). R8 needs a model call for each item, so this demo does not run it at scale. In production, clean rows go to the model in batches.</p>
+    </section>
+
+  </div>
+
+  <!-- Part B: review queue -->
+  <section class="card queue-card" aria-labelledby="queue-title">
+    <div class="card-head queue-head">
+      <div>
+        <h2 id="queue-title">Review queue</h2>
+        <p class="sub" id="queue-summary">Loading sample catalog…</p>
+      </div>
+      <button class="btn btn-ghost" id="download" type="button" disabled>
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        decisions.csv
+      </button>
+    </div>
+
+    <div class="filters" id="filter" role="group" aria-label="Filter by decision">
+      <button class="chip is-active" type="button" data-filter="all" aria-pressed="true">All <b id="filter-all">0</b></button>
+      <button class="chip" type="button" data-filter="remove" aria-pressed="false">Removed <b id="filter-remove">0</b></button>
+      <button class="chip" type="button" data-filter="flag" aria-pressed="false">Flagged <b id="filter-flag">0</b></button>
+      <button class="chip" type="button" data-filter="clean" aria-pressed="false">Clean <b id="filter-clean">0</b></button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="queue">
+        <thead>
+          <tr>
+            <th scope="col">SKU</th>
+            <th scope="col">Title</th>
+            <th scope="col">Category</th>
+            <th scope="col" class="right">Price</th>
+            <th scope="col" class="right">Images</th>
+            <th scope="col">Decision</th>
+            <th scope="col">Reason</th>
+          </tr>
+        </thead>
+        <tbody id="rows-body"></tbody>
+      </table>
+    </div>
+
+    <p class="error" id="load-error" hidden></p>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>Rules run in a Web Worker. No server, no API key, no data leaves this page.</span>
+  <span>Demo data only.</span>
+</footer>
+
+<dialog id="detail" aria-labelledby="detail-title">
+  <div class="dialog-head">
+    <div>
+      <p class="eyebrow" id="detail-sku">SKU</p>
+      <h2 id="detail-title">Item</h2>
+    </div>
+    <button class="icon-btn" id="detail-close" type="button" aria-label="Close details">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="dialog-decision" id="detail-decision"></div>
+  <div id="detail-body"></div>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
